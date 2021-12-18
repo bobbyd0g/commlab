@@ -1,0 +1,358 @@
+image:
+  repository: matrixdotorg/synapse
+  pullPolicy: IfNotPresent
+  
+signingkey:
+  job:
+    enabled: true
+    generateImage:
+      repository: matrixdotorg/synapse
+      tag: v1.49.0
+      pullPolicy: IfNotPresent
+    publishImage:
+      repository: bitnami/kubectl
+      tag: 1.21.8
+      pullPolicy: IfNotPresent
+  resources:
+   requests:
+     cpu: 100m
+     memory: 250Mi
+
+serverName: 'example.com'
+publicServerName: 'matrix.example.com'
+
+config:
+  # publicBaseurl: 'https://matrix.example.com'
+  logLevel: INFO
+  reportStats: true
+  # recaptcha:
+  #   publicKey: ''
+  #   privateKey: ''
+  # turnUris: []
+  # turnSecret: ''
+  enableRegistration: false
+  macaroonSecretKey: 'SECRET'
+  trustedKeyServers:
+    - server_name: matrix.org
+  #   verify_keys:
+  #     "ed25519:auto": "Noi6WqcDj0QmPxCNQqgezwTlBKrfqehY1u2FyWP9uYw"
+  extraListeners: []
+  #  - port: 9000
+  #    bind_addresses: ['::']
+  #    type: manhole
+
+extraConfig:
+  sso:
+    client_whitelist:
+      - https://element.example.com/
+  oidc_providers:
+    - idp_id: keycloak
+      idp_name: "example-login"
+      issuer: "https://login.example.com/auth/realms/example"
+      client_id: "synapse"
+      client_secret: "SECRET"
+      scopes: ["openid", "profile"]
+      user_mapping_provider:
+        config:
+          localpart_template: "{{ user.preferred_username }}"
+          display_name_template: "{{ user.name }}"
+#  use_presence: false
+#  enable_search: false
+#  federation_domain_whitelist:
+#    - lon.example.com
+#    - nyc.example.com
+#    - syd.example.com
+#  dynamic_thumbnails: true
+
+extraSecrets: {}
+#  password_config:
+#    pepper: ''
+
+synapse:
+  ## Must be "Recreate" when only one replica in use
+  strategy:
+    type: Recreate
+  annotations: {}
+  #  prometheus.io/scrape: "true"
+  #  prometheus.io/path: /_synapse/metrics
+  #  prometheus.io/port: 9090
+  labels: {}
+  extraEnv: []
+  #  - name: LD_PRELOAD
+  #    value: /usr/lib/x86_64-linux-gnu/libjemalloc.so.2
+  #  - name: SYNAPSE_CACHE_FACTOR
+  #    value: "2"
+  extraVolumes: []
+  #  - name: spamcheck
+  #    flexVolume:
+  #      driver: ananace/git-live
+  #      options:
+  #        repo: https://github.com/company/synapse-module
+  #        interval: 1d
+  #      readOnly: true
+  extraVolumeMounts: []
+  #  - name: spamcheck
+  #    mountPath: /usr/local/lib/python3.7/site-packages/company
+  extraCommands: []
+  # - 'apt-get update -yqq && apt-get install patch -yqq'
+  # - 'patch -d/usr/local/lib/python3.7/site-packages/synapse -p2 < /synapse/patches/something.patch'
+  podSecurityContext: {}
+  #  fsGroup: 666
+  #  runAsGroup: 666
+  #  runAsUser: 666
+  securityContext: {}
+  #  capabilities:
+  #    drop:
+  #    - ALL
+  #  readOnlyRootFilesystem: true
+  #  runAsNonRoot: true
+  #  runAsUser: 666
+  resources:
+  #  limits:
+  #    cpu: 1000m
+  #    memory: 2500Mi
+   requests:
+     cpu: 500m
+     memory: 512Mi
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: http
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: http
+  nodeSelector:
+    my.provider.com/node-pool: matrix
+  tolerations: []
+  affinity: {}
+
+workers:
+  default:
+    replicaCount: 0
+    strategy:
+      type: RollingUpdate
+    annotations: {}
+    extraEnv: []
+    volumes: []
+    volumeMounts: []
+    extraCommands: []
+    podSecurityContext: {}
+    securityContext: {}
+    resources: {}
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: listener
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: listener
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+
+  generic_worker:
+    enabled: false
+    generic: true
+    listeners: [client, federation]
+    csPaths:
+    # - "/_matrix/client/(v2_alpha|r0|v3)/sync"
+      - "/_matrix/client/(api/v1|v2_alpha|r0|v3)/events"
+    # - "/_matrix/client/(api/v1|r0|v3)/initialSync"
+    # - "/_matrix/client/(api/v1|r0|v3)/rooms/[^/]+/initialSync"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/publicRooms"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/joined_members"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/context/.*"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/members"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/state"
+      - "/_matrix/client/unstable/org.matrix.msc2946/rooms/.*/spaces"
+      - "/_matrix/client/unstable/org.matrix.msc2946/rooms/.*/hierarchy"
+      - "/_matrix/client/unstable/im.nheko.summary/rooms/.*/summary"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/account/3pid"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/keys/query"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/keys/changes"
+      - "/_matrix/client/versions"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/voip/turnServer"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/joined_groups"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/publicised_groups"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/publicised_groups/"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/login"
+      - "/_matrix/client/(r0|v3|unstable)/register"
+      - "/_matrix/client/(r0|v3|unstable)/auth/.*/fallback/web"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/send"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/state/"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/rooms/.*/(join|invite|leave|ban|unban|kick)"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/join/"
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/profile/"
+    paths:
+      - "/_matrix/federation/v1/event/"
+      - "/_matrix/federation/v1/state/"
+      - "/_matrix/federation/v1/state_ids/"
+      - "/_matrix/federation/v1/backfill/"
+      - "/_matrix/federation/v1/get_missing_events/"
+      - "/_matrix/federation/v1/publicRooms"
+      - "/_matrix/federation/v1/query/"
+      - "/_matrix/federation/v1/make_join/"
+      - "/_matrix/federation/v1/make_leave/"
+      - "/_matrix/federation/v1/send_join/"
+      - "/_matrix/federation/v2/send_join/"
+      - "/_matrix/federation/v1/send_leave/"
+      - "/_matrix/federation/v2/send_leave/"
+      - "/_matrix/federation/v1/invite/"
+      - "/_matrix/federation/v2/invite/"
+      - "/_matrix/federation/v1/query_auth/"
+      - "/_matrix/federation/v1/event_auth/"
+      - "/_matrix/federation/v1/exchange_third_party_invite/"
+      - "/_matrix/federation/v1/user/devices/"
+      - "/_matrix/federation/v1/send/"
+      - "/_matrix/federation/v1/get_groups_publicised"
+      - "/_matrix/key/v2/query"
+  pusher:
+    enabled: false
+  appservice:
+    enabled: false
+  federation_sender:
+    enabled: false
+  media_repository:
+    enabled: false
+    listeners: [media]
+    csPaths:
+      - "/_matrix/media/"
+      - "/_synapse/admin/v1/purge_media_cache"
+      - "/_synapse/admin/v1/room/.*/media.*"
+      - "/_synapse/admin/v1/user/.*/media.*"
+      - "/_synapse/admin/v1/media/.*"
+      - "/_synapse/admin/v1/quarantine_media/.*"
+    paths:
+      - "/_matrix/media/"
+  user_dir:
+    enabled: false
+    listeners: [client]
+    csPaths:
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/user_directory/search"
+  frontend_proxy:
+    enabled: false
+    listeners: [client]
+    csPaths:
+      - "/_matrix/client/(api/v1|r0|v3|unstable)/keys/upload"
+    # - "/_matrix/client/(api/v1|r0|v3|unstable)/presence/[^/]+/status"
+
+
+wellknown:
+  enabled: true
+  replicaCount: 1
+  useIpv6: false
+  server:
+    m.server: matrix.example.com:443
+  client:
+   m.homeserver:
+     base_url: https://matrix.example.com
+  htdocsPath: /var/www/localhost/htdocs
+  image:
+    repository: m4rcu5/lighttpd
+    tag: latest
+    pullPolicy: Always
+  podSecurityContext: {}
+  securityContext: {}
+  resources:
+  #  limits:
+  #    cpu: 5m
+  #    memory: 15Mi
+   requests:
+     cpu: 5m
+     memory: 15Mi
+  nodeSelector:
+    my.provider.com/node-pool: matrix
+  tolerations: []
+  affinity: {}
+
+postgresql:
+  enabled: false
+  postgresqlPassword: 
+  postgresqlUsername: example-matrix
+  postgresqlDatabase: example-matrix
+  postgresqlInitdbArgs: "--lc-collate=C --lc-ctype=C"
+  persistence:
+    size: 20Gi
+  extraArgs: {}
+
+externalPostgresql:
+  host: serviceName.namespace.svc
+  port: 5432
+  username: example-matrix
+  password: password
+  # existingSecret: example-matrix-pguser-example-matrix
+  # existingSecretPasswordKey: password
+  database: example-matrix
+  # sslmode: prefer
+  extraArgs: {}
+
+redis:
+  enabled: true
+  usePassword: true
+  password: password
+  # existingSecret: redis-secret
+  cluster:
+    enabled: false
+  master:
+    persistence:
+      enabled: false
+    statefulset:
+      updateStrategy: RollingUpdate
+
+externalRedis:
+  # host: redis
+  port: 6379
+  # password: synapse
+  #existingSecret: redis-secrets
+  #existingSecretPasswordKey: redis-password
+
+persistence:
+  enabled: true
+  # existingClaim: synapse-data
+  storageClass: "my-block-storage-retain"
+  accessMode: ReadWriteOnce
+  size: 100Gi
+
+volumePermissions:
+  enabled: false
+  uid: 666
+  gid: 666
+  image:
+    repository: alpine
+    tag: latest
+    pullPolicy: Always
+  resources: {}
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 100m
+
+service:
+  type: ClusterIP
+  port: 8008
+  targetPort: http
+
+ingress:
+  enabled: true
+  traefikPaths: false
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    kubernetes.io/ingress.class: nginx
+    kubernetes.io/tls-acme: "false"
+    cert-manager.io/cluster-issuer: "letsencrypt-example"
+    cert-manager.io/acme-challenge-type: http01
+  csHosts: []
+  hosts: []
+  wkHosts: []
+  paths: []
+  csPaths: []
+  includeUnderscoreSynapse: true
+  includeServerName: true
+  tls:
+   - secretName: example-matrix-tls
+     hosts:
+       - example.com
+       - matrix.example.com
+  # className: nginx

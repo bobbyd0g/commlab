@@ -1,0 +1,19 @@
+apiVersion: v2
+appVersion: 1.49.0
+dependencies:
+- condition: postgresql.enabled
+  name: postgresql
+  repository: https://charts.bitnami.com/bitnami
+  version: ~8.9.4
+- condition: redis.enabled
+  name: redis
+  repository: https://charts.bitnami.com/bitnami
+  version: ~10.6.10
+description: Matrix reference homeserver
+icon: https://matrix.org/images/matrix-logo.svg
+maintainers:
+- email: ace@haxalot.com
+  name: Alexander Olofsson
+name: matrix-synapse
+type: application
+version: 2.1.19

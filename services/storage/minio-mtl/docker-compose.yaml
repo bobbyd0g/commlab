@@ -1,0 +1,73 @@
+version: '3.7'
+
+x-minio-common: &minio-common
+  image: quay.io/minio/minio:RELEASE.2021-11-24T23-19-33Z
+  command: server --console-address ":9001" /data
+  expose:
+    - "9000"
+    - "9001"
+  environment:
+    MINIO_SITE_REGION: region1
+    MINIO_ROOT_USER: admin-user
+    MINIO_ROOT_PASSWORD: admin-password
+    MINIO_DOMAIN: api.io.example.com
+  healthcheck:
+    test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+    interval: 30s
+    timeout: 20s
+    retries: 3
+
+services:
+  minio1:
+    <<: *minio-common
+    hostname: minio1
+    restart: always
+    volumes:
+      - /data:/data
+    networks:
+      - storage
+
+  nginx:
+    hostname: nginx
+    restart: always
+    image: nginx:1.19.2-alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./fullchain.pem:/etc/nginx/ssl/fullchain.pem
+      - ./privkey.pem:/etc/nginx/ssl/privkey.pem
+    ports:
+      - "443:9000"
+      - "9001:9001"
+    depends_on:
+      - minio1
+    networks:
+      - storage
+
+  mc01:
+    hostname: mc01
+    restart: always
+    image: quay.io/minio/mc:RELEASE.2021-11-16T20-37-36Z
+    volumes:
+      - ./mc-mastodon.sh:/root/mc-mastodon.sh:ro
+    entrypoint: sh /root/mc-mastodon.sh
+    depends_on:
+      - minio1
+      - nginx
+    networks:
+      - storage
+
+  mc02:
+    hostname: mc02
+    restart: always
+    image: quay.io/minio/mc:RELEASE.2021-11-16T20-37-36Z
+    volumes:
+      - ./mc-peertube.sh:/root/mc-peertube.sh:ro
+    entrypoint: sh /root/mc-peertube.sh
+    depends_on:
+      - minio1
+      - nginx
+    networks:
+      - storage
+
+networks:
+  storage:

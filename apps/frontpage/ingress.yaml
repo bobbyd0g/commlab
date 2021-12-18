@@ -1,0 +1,34 @@
+---
+# Source: mastodon/templates/wellknown-redirect.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: example-frontpage
+  namespace: example-frontpage
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-example"
+    cert-manager.io/acme-challenge-type: http01
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    ## The following must be present to enable Mastodon and Matrix federations
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      rewrite /.well-known https://mastodon.example.com$uri permanent;
+      rewrite /.well-known/matrix https://matrix.example.com$uri permanent;
+spec:
+  tls:
+    - hosts:
+        - mastodon.example.com
+        - example.com
+      secretName: example-tls
+  rules:
+  - host: example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: example-frontpage
+            port: 
+              number: 443

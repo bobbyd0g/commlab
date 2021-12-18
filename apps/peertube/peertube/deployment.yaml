@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: peertube
+  labels:
+    app: peertube
+spec:
+  replicas: 1 # Do not increase replicas
+  selector:
+    matchLabels:
+      app: peertube
+  template:
+    metadata:
+      labels:
+        app: peertube
+    spec:
+      containers:
+        - name: peertube
+          image: chocobozzz/peertube:production-buster
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+            - containerPort: 443
+              name: https
+            - containerPort: 9000
+              name: peertube
+            - containerPort: 1935
+              name: rtmp
+          envFrom:
+            - configMapRef:
+                name: peertube-config
+            - secretRef:
+                name: peertube-secret
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: peertube-pguser-peertube
+                  key: dbname
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: peertube-pguser-peertube
+                  key: user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: peertube-pguser-peertube
+                  key: password
+            - name: PEERTUBE_DB_HOSTNAME
+              valueFrom:
+                secretKeyRef:
+                  name: peertube-pguser-peertube
+                  key: host
+            - name: PEERTUBE_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: peertube-pguser-peertube
+                  key: user
+            - name: PEERTUBE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: peertube-pguser-peertube
+                  key: password
+            - name: PEERTUBE_DB_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: peertube-pguser-peertube
+                  key: port
+            - name: PEERTUBE_REDIS_HOSTNAME
+              value: "localhost"
+            - name: PEERTUBE_REDIS_AUTH
+              value: ""
+          volumeMounts:
+            - name: peertube-data
+              mountPath: /data
+        - name: exporter
+          image: bobbyd0g/peertubeexporter
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 9113
+            protocol: TCP
+          livenessProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /
+              port: 9113
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            successThreshold: 1
+            timeoutSeconds: 3
+        - name: redis
+          image: redis:6
+          imagePullPolicy: IfNotPresent
+          args: ["--appendonly", "yes", "--save", "120", "1", "--save", "30", "2"]
+          ports:
+            - containerPort: 6379
+              name: redis
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: peertube-data
+          persistentVolumeClaim:
+            claimName: peertube-data
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-data

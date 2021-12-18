@@ -1,0 +1,213 @@
+replicaCount: 3
+
+image:
+  repository: tootsuite/mastodon
+  tag: v3.4.4
+  pullPolicy: IfNotPresent
+
+mastodon:
+  createAdmin:
+    enabled: true
+    username: not_gargron
+    email: admin@example.com
+  cron:
+    removeMedia:
+      enabled: true
+      schedule: "0 0 * * 0"
+  locale: en
+  local_domain: example.com
+  web_domain: mastodon.example.com
+  deploy_wellknown_redirect: false
+  persistence:
+    assets:
+      storageClassName: my-block-storage-retain
+      accessMode: ReadWriteOnce
+      resources:
+        requests:
+          storage: 20Gi
+    system:
+      storageClassName: my-block-storage-retain
+      accessMode: ReadWriteOnce
+      resources:
+        requests:
+          storage: 100Gi
+  s3:
+    enabled: true
+    access_key: "ACCESS-KEY"
+    access_secret: "SECRET-KEY"
+    bucket: "example-mastodon"
+    endpoint: https://api.io.example.com
+    hostname: api.io.example.com
+    region: "region1"
+    alias_host: ""
+  secrets:
+    secret_key_base: "SECRET"
+    otp_secret: "SECRET"
+    vapid:
+      private_key: "SECRET"
+      public_key: "SECRET"
+  sidekiq:
+    concurrency: 25
+  smtp:
+    auth_method: plain
+    ca_file: /etc/ssl/certs/ca-certificates.crt
+    delivery_method: smtp
+    domain: example.com
+    enable_starttls_auto: true
+    from_address: no-reply@example.com
+    login: admin@example.com
+    openssl_verify_mode: peer
+    password: password
+    port: 587
+    reply_to: no-reply@example.com
+    server: mail.example.com
+    tls: false
+  streaming:
+    port: 4000
+    workers: 1
+  web:
+    port: 3000
+
+externalAuth:
+  saml:
+    enabled: true
+    acs_url: https://mastodon.example.com/auth/auth/saml/callback
+    issuer: mastodon
+    idp_sso_target_url: https://login.example.com/auth/realms/example/protocol/saml
+    idp_cert: '-----BEGIN CERTIFICATE-----[ . . . ]-----END CERTIFICATE-----'
+    idp_cert_fingerprint: 
+    name_identifier_format: urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified
+    cert: 
+    private_key: 
+    want_assertion_signed: true
+    want_assertion_encrypted: false
+    assume_email_is_verified: true
+    uid_attribute: ""
+    attributes_statements:
+      uid: "uid"
+      email: "email"
+      full_name: ""
+      first_name: "first_name"
+      last_name: "last_name"
+      verified: 
+      verified_email: 
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    kubernetes.io/tls-acme: "false"
+    cert-manager.io/cluster-issuer: "letsencrypt-example"
+    nginx.ingress.kubernetes.io/proxy-body-size: 40m
+  hosts:
+    - host: mastodon.example.com
+      paths:
+        - path: '/'
+  tls:
+    - secretName: example-mastodon-tls
+      hosts:
+        - mastodon.example.com
+
+elasticsearch:
+  enabled: false
+  # image:
+  #   tag: 6
+  # master:
+  #   # replicas: 3
+  #   # podAntiAffinityPreset: hard
+  #   nodeSelector:
+  #     my.provider.com/node-pool: web
+  #   resources:
+  #     limits: {}
+  #     requests: {}
+  # coordinating:
+  #   # replicas: 0
+  #   # podAntiAffinityPreset: hard
+  #   nodeSelector:
+  #     my.provider.com/node-pool: web
+  #   resources:
+  #     limits: {}
+  #     requests: {}
+  # data:
+  #   # replicas: 0
+  #   # podAntiAffinityPreset: hard
+  #   nodeSelector:
+  #     my.provider.com/node-pool: web
+  #   resources:
+  #     limits: {}
+  #     requests: {}
+  # ingest:
+  #   # replicas: 0
+  #   # podAntiAffinityPreset: hard
+  #   nodeSelector:
+  #     my.provider.com/node-pool: web
+  #   resources:
+  #     limits: {}
+  #     requests: {}
+  # metrics:
+  #   enabled: true
+  #   # podAntiAffinityPreset: hard
+  #   nodeSelector:
+  #     my.provider.com/node-pool: web
+  #   resources:
+  #     limits: {}
+  #     requests: {}
+
+postgresql:
+  enabled: false
+  postgresqlHostname: serviceName.namespace.svc
+  postgresqlDatabase: example-mastodon
+  postgresqlPassword: "password"
+  postgresqlUsername: example-mastodon
+
+# https://github.com/bitnami/charts/tree/master/bitnami/redis#parameters
+redis:
+  password: "password"
+
+service:
+  type: ClusterIP
+  port: 80
+
+# https://github.com/tootsuite/mastodon/blob/master/Dockerfile#L88
+#
+# if you manually change the UID/GID environment variables, ensure these values
+# match:
+podSecurityContext:
+  runAsUser: 991
+  runAsGroup: 991
+  fsGroup: 991
+
+securityContext: {}
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+resources:
+  # limits:
+  #   cpu: 2.0
+  #   memory: 2000Mi
+  requests:
+    cpu: 100m
+    memory: 512Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector:
+  my.provider.com/node-pool: web
+
+tolerations: []
+
+affinity: {}

@@ -1,0 +1,29 @@
+{{- if .Values.mastodon.deploy_wellknown_redirect -}}
+{{- $fullName := include "mastodon.fullname" . -}}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $fullName }}-wellknown-redirect
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      rewrite /.well-known https://{{ .Values.mastodon.web_domain }}$uri permanent;
+spec:
+  tls:
+    - hosts:
+        - {{ .Values.mastodon.web_domain }}
+        - {{ .Values.mastodon.local_domain }}
+      secretName: {{ $fullName }}-wellknown-tls
+spec:
+  rules:
+  - host: {{ .Values.mastodon.local_domain }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ $fullName }}-web
+            port: 
+              number: {{ .Values.mastodon.web.port }}
+{{- end }}

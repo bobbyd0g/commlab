@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: example-frontpage
+  labels:
+    app: frontpage
+  namespace: example-frontpage
+spec:
+  selector:
+    app: frontpage
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      name: http
+    - protocol: TCP
+      port: 443
+      targetPort: 443
+      name: https
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example-frontpage
+  labels:
+    app: frontpage
+  namespace: example-frontpage
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontpage
+  template:
+    metadata:
+      labels:
+        app: frontpage
+    spec:
+      nodeSelector:
+        my.provider.com/node-pool: web
+      containers:
+        - name: example-frontpage
+          image: my-repo/example-frontpage:v0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+              name: http
+            - containerPort: 443
+              name: https
+          # volumeMounts:
+          #   - name: config
+          #     mountPath: /etc/nginx/nginx.conf
+          #     subPath: nginx.conf
+          #   - name: config
+          #     mountPath: /var/www/html/index.htm
+          #     subPath: index.htm
+      # volumes:
+      #   - name: config
+      #     configMap:
+      #       name: example-frontpage-conf
+        # - name: site
+        #   configMap:
+        #     name: example-frontpage

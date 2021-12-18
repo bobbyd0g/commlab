@@ -1,0 +1,97 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# You can enable multiple instances by putting them in separate namespaces
+# here, adding a commonLabel, and matching the Labels in the patches below.
+namespace: example-peertube
+commonLabels:
+  peertube: instance01
+
+# Here you can update your image release version, or swap images with newName.
+images:
+- name: chocobozzz/peertube
+  newTag: v3.4.1-buster
+
+# You can use a non-PGO external database by swapping in these commented vars
+# instead of the pguser secret, as referenced in deployment.yaml
+configMapGenerator:
+- name: peertube-config
+  literals:
+  - PEERTUBE_INSTANCE_NAME="example"
+  # - PEERTUBE_INSTANCE_DESCRIPTION="ExampleDesc"
+  - PEERTUBE_WEBSERVER_HOSTNAME="peertube.example.com"
+  - PEERTUBE_ADMIN_EMAIL="admin@example.com"
+  # - POSTGRES_USER="peertube"
+  # - POSTGRES_DB="peertube"
+  # - PEERTUBE_DB_HOSTNAME="peertube-primary"
+  # - PEERTUBE_DB_USERNAME="peertube"
+  # - PEERTUBE_DB_PASSWORD="password"
+  # - PEERTUBE_DB_PORT="5432"
+  - PEERTUBE_DB_SSL="true"
+  - PEERTUBE_SMTP_USERNAME="admin@example.com"
+  - PEERTUBE_SMTP_HOSTNAME="mail.example.com"
+  - PEERTUBE_SMTP_PORT="587"
+  - PEERTUBE_SMTP_FROM="noreply@example.com"
+  - PEERTUBE_SMTP_TLS="false"
+  - PEERTUBE_SMTP_DISABLE_STARTTLS="false"
+  - PEERTUBE_OBJECT_STORAGE_ENABLED="true"
+  - PEERTUBE_OBJECT_STORAGE_ENDPOINT="api.io.example.com"
+  - PEERTUBE_OBJECT_STORAGE_REGION="region1"
+  - PEERTUBE_OBJECT_STORAGE_STREAMING_PLAYLISTS_BUCKET_NAME="example-peertube"
+  - PEERTUBE_OBJECT_STORAGE_STREAMING_PLAYLISTS_PREFIX="streaming/"
+  - PEERTUBE_OBJECT_STORAGE_VIDEOS_BUCKET_NAME="example-peertube"
+  - PEERTUBE_OBJECT_STORAGE_VIDEOS_PREFIX="videos/"
+
+secretGenerator:
+- name: peertube-secret
+  literals:
+  - PEERTUBE_SMTP_PASSWORD="password"
+  - AWS_ACCESS_KEY_ID="ACCESS-KEY"
+  - AWS_SECRET_ACCESS_KEY="SECRET-KEY"
+  # - POSTGRES_PASSWORD="password"
+
+resources:
+- pvc.yaml
+- service.yaml
+- ingress.yaml
+- deployment.yaml
+
+patchesJson6902:
+# Patching deployment with a nodeSelector -- use a node / pool label from provider
+- target:
+    version: v1
+    kind: Deployment
+    name: peertube
+    labelSelector: "peertube=instance01"
+  patch: |-
+    - op: add
+      path: /spec/template/spec/nodeSelector
+      value:
+        my.provider.com/node-pool: peertube
+# Patching your hostname into the Ingress
+- target:
+    kind: Ingress
+    name: peertube
+    labelSelector: "peertube=instance01"
+  patch: |-
+    - op: replace
+      path: /spec/tls/0/hosts/0
+      value: peertube.example.com
+    - op: replace
+      path: /spec/rules/0/host
+      value: peertube.example.com
+# Patching ingress.yaml with certificate ClusterIssuer
+patches:
+- patch: |-
+    apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: peertube
+      labels:
+        peertube: instance01
+      annotations:  
+        cert-manager.io/cluster-issuer: "letsencrypt-example"
+        cert-manager.io/acme-challenge-type: http01
+
+generatorOptions:
+  disableNameSuffixHash: true

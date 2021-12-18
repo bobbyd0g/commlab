@@ -1,0 +1,97 @@
+apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  name: example-mastodon
+spec:
+  image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres:centos8-13.5-0
+  postgresVersion: 13
+  instances:
+    - name: pgha1
+      replicas: 3
+      resources:
+        requests:
+          cpu: 100m
+          memory: 10Mi
+      dataVolumeClaimSpec:
+        accessModes:
+        - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: 20Gi
+        storageClassName: my-block-storage-retain
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  postgres-operator.crunchydata.com/cluster: example-mastodon
+                  postgres-operator.crunchydata.com/instance-set: pgha1
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: "my.provider.com/node-pool"
+                operator: In
+                values:
+                - web
+  backups:
+    pgbackrest:
+      image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbackrest:centos8-2.36-0
+      jobs:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 10Mi
+      configuration:
+      - secret:
+          name: pgo-s3-creds
+      global:
+        repo1-path: /pgbackrest/postgres-operator/example-mastodon/repo1
+        repo1-retention-full: "22"
+        repo1-retention-full-type: time
+      repos:
+      - name: repo1
+        s3:
+          bucket: "example-mastodon-bakdb"
+          endpoint: "region1.backup-s3.com"
+          region: "region1"
+        schedules:
+          full: "0 2 * * 0"
+          incremental: "1 0 * * *"
+      manual:
+        repoName: repo1
+        options:
+          - --type=full
+  proxy:
+    pgBouncer:
+      image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbouncer:centos8-1.16-0
+      replicas: 3
+      resources:
+        requests:
+          cpu: 100m
+          memory: 10Mi
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 1
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  postgres-operator.crunchydata.com/cluster: example-mastodon
+                  postgres-operator.crunchydata.com/role: pgbouncer
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: "my.provider.com/node-pool"
+                operator: In
+                values:
+                - web
+  monitoring:
+    pgmonitor:
+      exporter:
+        image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres-exporter:ubi8-5.0.4-0

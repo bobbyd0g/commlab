@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Example.com</title>
+        <style>
+            .appButton {display:inline-block;text-align:center;float:none;padding:20px;width:250px;height:250px;}
+            .appButton img {display:inline;height:60%;object-fit:cover;}
+            html {background-color: #000000;color:#ffffff;font-family:Arial,sans;text-align:center;}
+            a {color: #FFFFFF}
+            a:visited {color: #FFFFFF}
+        </style>
+    </head>
+    <body>
+        <div id="bodyBox" style="position:relative;top:80px;width:960px;margin:0 auto;">
+            <div id="welcomeMsg" style="display:block;text-align:center;padding:0 0 40px 0">
+                <h2>Welcome to Example.com</h2>
+            </div>
+            <div id="appNav" style="display:block;">
+                <a href="https://peertube.example.com/plugins/auth-openid-connect/0.0.5/auth/openid-connect">
+                <div class="appButton">
+                    <img src="peertube.png" />
+                    <h3>Peertube</h3>
+                </div></a>
+                <a href="https://mastodon.example.com/web/getting-started">
+                <div class="appButton">
+                    <img src="mastodon.png" />
+                    <h3>Mastodon</h3>
+                </div></a>
+                <a href="https://element.example.com/">
+                <div class="appButton">
+                    <img src="element.png" />
+                    <h3>Matrix</h3>
+                </div></a>
+            </div>
+            <div id="accountBar" style="display:block;text-align:center;float:left;height:160px;width:960px;">
+                <a href="https://peertube.example.com/plugins/auth-openid-connect/0.0.5/auth/openid-connect">Login / Sign Up</a> &bull;
+                <a href="https://login.example.com/auth/realms/example/account/?referrer=mastodon">Account Settings</a> &bull;
+                <a href="https://liberapay.org/myaccount/donate">Support the Site</a> &bull;
+                <a href="https://github.com/bobbyd0g/commlab">Start your Own</a>
+            </div>
+        </div>
+    </body>
+</html>
